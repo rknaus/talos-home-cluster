@@ -1,0 +1,6 @@
+---
+machine:
+  install:
+    disk: none
+    diskSelector:
+      wwid: eui.0025388981b8*
