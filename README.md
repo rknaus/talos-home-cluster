@@ -419,3 +419,73 @@ talosctl kubeconfig \
 ```
 
 [back to main README.md](../README.md)
+
+# Talos Command Examples
+
+## Shutdown the cluster to save energy
+
+.. in reverse order to keep master0 until the end.
+
+```bash
+export NODE_TYPE=worker
+for i in {3..0}
+do
+  talosctl shutdown --force --nodes ${NODE_TYPE}${i}.${CLUSTER_NAME} --endpoints master0.${CLUSTER_NAME}
+done
+```
+
+```bash
+export NODE_TYPE=master
+for i in {2..0}
+do
+  talosctl shutdown --force --nodes ${NODE_TYPE}${i}.${CLUSTER_NAME} --endpoints master0.${CLUSTER_NAME}
+done
+```
+
+## Update the Node Configuration (example the DNS configuration)
+
+To update the DNS server configuration on tge existing Talos cluster, you'll need to modify the machine configuration for each node:
+
+```bash
+export NODE_TYPE=master
+for i in {0..2}
+do
+  talosctl patch machineconfig -p '[{"op": "replace", "path": "/machine/network/nameservers/0", "value": "192.168.0.253"}]' --nodes ${NODE_TYPE}${i}.${CLUSTER_NAME} --endpoints master0.${CLUSTER_NAME}
+done
+```
+
+Apply the worker node configuration to the master nodes:
+
+```bash
+export NODE_TYPE=worker
+for i in {0..3}
+do
+  talosctl patch machineconfig -p '[{"op": "replace", "path": "/machine/network/nameservers/0", "value": "192.168.0.253"}]' --nodes ${NODE_TYPE}${i}.${CLUSTER_NAME} --endpoints master0.${CLUSTER_NAME}
+done
+```
+
+Validate the configuration:
+
+```bash
+export NODE_TYPE=master
+for i in {0..2}
+do
+  talosctl get resolvers --nodes ${NODE_TYPE}${i}.${CLUSTER_NAME} --endpoints master0.${CLUSTER_NAME}
+done
+```
+
+Apply the worker node configuration to the master nodes:
+
+```bash
+export NODE_TYPE=worker
+for i in {0..3}
+do
+  talosctl get resolvers --nodes ${NODE_TYPE}${i}.${CLUSTER_NAME} --endpoints master0.${CLUSTER_NAME}
+done
+```
+
+### Alternative to edit the machineconfig
+
+```bash
+talosctl edit machineconfig --nodes master0.${CLUSTER_NAME} --endpoints master0.${CLUSTER_NAME}
+```

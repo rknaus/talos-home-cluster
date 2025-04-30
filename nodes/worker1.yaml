@@ -12,4 +12,4 @@ machine:
             gateway: 192.168.0.254
         mtu: 1500
     nameservers:
-      - 192.168.0.10
+      - 192.168.0.253
