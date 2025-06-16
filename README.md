@@ -20,146 +20,12 @@ The following diagram gives a brief overview about the set up home lab cluster.
 
 <img src="./cluster-diagram/kubernetes-environment.svg"/>
 
-## Prerequisites
-
-The following prerequisites must be met before starting.
-
-1. Reserve DNS entry for each node and for the api. In my case the dns entries are as following:
-  - api.k8s.local => 192.168.0.200
-  - master0.k8s.local => 192.168.0.201
-  - master1.k8s.local => 192.168.0.202
-  - master2.k8s.local => 192.168.0.203
-  - worker0.k8s.local => 192.168.0.204
-  - worker1.k8s.local => 192.168.0.205
-  - worker2.k8s.local => 192.168.0.206
-  - worker3.k8s.local => 192.168.0.207
-
-2. For easier management during initial boot, make a dhcp reservation for each node with the IP
-address and its MAC address.
-
-2. Download Talos from the releases GitHub page
-([github.com/siderolabs/talos/releases](https://github.com/siderolabs/talos/releases/)) and flash
-the iso to a memory stick with a tool like balenaEtcher.
-
-3. Boot all nodes from the memory stick.
-
-## Talos base installation
-
-Make sure the defined values under `talos/nodes/*.yaml` `talos/patches/*.yaml` are correct. Especially the disks and
-network interfaces need to be checked.
-
-Define general variables:
+## Talos base installation with Terraforn
 
 ```bash
-export CLUSTER_NAME=k8s.local
-export API_ENDPOINT=https://api.${CLUSTER_NAME}:6443
+cd terraform-talos
 ```
-
-Generate secret information (ssl keys and certs) and the generic talos configuration:
-
-```bash
-talosctl gen secrets --output-file secrets.yaml
-talosctl gen config  \
-    --with-secrets secrets.yaml \
-    --output-types talosconfig  \
-    --output talosconfig        \
-    $CLUSTER_NAME               \
-    $API_ENDPOINT
-talosctl config merge ./talosconfig
-```
-
-Generate the master node configuration for each master node:
-
-```bash
-export NODE_TYPE=master
-for i in {0..2}
-do
-  talosctl gen config \
-    --output rendered/${NODE_TYPE}${i}.yaml     \
-    --output-types controlplane                 \
-    --with-cluster-discovery=false              \
-    --with-secrets secrets.yaml                 \
-    --config-patch @patches/cluster-name.yaml   \
-    --config-patch @patches/cni.yaml            \
-    --config-patch @patches/disk.yaml           \
-    --config-patch @patches/vip.yaml            \
-    --config-patch @nodes/${NODE_TYPE}${i}.yaml \
-    $CLUSTER_NAME                               \
-    $API_ENDPOINT
-done
-```
-
-Generate the worker node configuration for each worker node:
-
-```bash
-export NODE_TYPE=worker
-for i in {0..3}
-do
-  talosctl gen config \
-    --output rendered/${NODE_TYPE}${i}.yaml     \
-    --output-types worker                       \
-    --with-cluster-discovery=false              \
-    --with-secrets secrets.yaml                 \
-    --config-patch @patches/cluster-name.yaml   \
-    --config-patch @patches/cni.yaml            \
-    --config-patch @patches/disk.yaml           \
-    --config-patch @nodes/${NODE_TYPE}${i}.yaml \
-    $CLUSTER_NAME                               \
-    $API_ENDPOINT
-done
-```
-
-Apply the master node configuration to the master nodes:
-
-```bash
-export NODE_TYPE=master
-for i in {0..2}
-do
-  talosctl --nodes ${NODE_TYPE}${i}.${CLUSTER_NAME} apply-config --file rendered/${NODE_TYPE}${i}.yaml --insecure
-done
-```
-
-Apply the worker node configuration to the master nodes:
-
-```bash
-export NODE_TYPE=worker
-for i in {0..3}
-do
-  talosctl --nodes ${NODE_TYPE}${i}.${CLUSTER_NAME} apply-config --file rendered/${NODE_TYPE}${i}.yaml --insecure
-done
-```
-
-Bootstrap the talos cluster:
-
-```bash
-talosctl bootstrap \
-  --nodes master0.${CLUSTER_NAME} \
-  --endpoints master0.${CLUSTER_NAME} \
-  --talosconfig=./talosconfig
-```
-
-Finally retreive the kube config
-
-```bash
-talosctl kubeconfig \
-  --nodes master0.${CLUSTER_NAME} \
-  --endpoints master0.${CLUSTER_NAME} \
-  --talosconfig=./talosconfig
-```
-
-The nodes should be visible now, but in `NotReady` state:
-
-```bash
-% kubectl get nodes
-NAME      STATUS     ROLES           AGE     VERSION
-master0   NotReady   control-plane   3m41s   v1.32.3
-master1   NotReady   control-plane   3m13s   v1.32.3
-master2   NotReady   control-plane   3m42s   v1.32.3
-worker0   NotReady   <none>          3m54s   v1.32.3
-worker1   NotReady   <none>          3m54s   v1.32.3
-worker2   NotReady   <none>          3m53s   v1.32.3
-worker3   NotReady   <none>          3m53s   v1.32.3
-```
+and follow the instructions in the README of the subfolder
 
 ## Cilium installation
 
@@ -427,6 +293,7 @@ talosctl kubeconfig \
 .. in reverse order to keep master0 until the end.
 
 ```bash
+export CLUSTER_NAME=k8s.local
 export NODE_TYPE=worker
 for i in {3..0}
 do
@@ -447,6 +314,7 @@ done
 To update the DNS server configuration on tge existing Talos cluster, you'll need to modify the machine configuration for each node:
 
 ```bash
+export CLUSTER_NAME=k8s.local
 export NODE_TYPE=master
 for i in {0..2}
 do

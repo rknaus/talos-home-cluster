@@ -1,6 +1,19 @@
+# Talos
 secrets.yaml
 controlplane.yaml
 worker.yaml
 talosconfig
 rendered/*.yaml
+
+# Kubernetes
+kubeconfig
+
+# ArgoCD
 argocd-operator
+
+# Terraform
+.terraform
+.terraform.lock.hcl
+
+# macOS
+.DS_Store
