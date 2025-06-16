@@ -1,15 +1,15 @@
 ---
 machine:
   network:
-    hostname: worker2.k8s.local
+    hostname: ${hostname}
     interfaces:
-      - interface: eno1
+      - interface: ${interface}
         dhcp: false
         addresses:
-          - 192.168.0.206/24
+          - ${address}
         routes:
           - network: 0.0.0.0/0
-            gateway: 192.168.0.254
+            gateway: ${gateway}
         mtu: 1500
     nameservers:
-      - 192.168.0.253
+      ${nameservers}
