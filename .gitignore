@@ -14,6 +14,7 @@ argocd-operator
 # Terraform
 .terraform
 .terraform.lock.hcl
+tfplan
 
 # macOS
 .DS_Store
