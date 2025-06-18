@@ -1,5 +1,3 @@
-# contains declarations of variables used in main.tf
-
 variable "talos_version" {
   type        = string
   description = "Talos Version to use"
