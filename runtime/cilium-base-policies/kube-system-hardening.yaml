@@ -1,0 +1,47 @@
+---
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: kube-system-hardening
+spec:
+  description: "This policy configures the connections for the kube-system namespace"
+  endpointSelector:
+    matchLabels:
+      "k8s:io.kubernetes.pod.namespace": kube-system
+  ingress:
+  - fromEntities:
+    - cluster
+  egress:
+  - toEntities:
+    - cluster
+  - toServices:
+    - k8sService:
+        serviceName: kubernetes # k8s apiserver
+        namespace: default
+  - toEndpoints:
+    - matchLabels:
+        "k8s:io.kubernetes.pod.namespace": kube-system
+        "k8s:k8s-app": kube-dns
+    toPorts:
+    - ports:
+      - port: "53"
+        protocol: UDP
+      - port: "53"
+        protocol: TCP
+      rules:
+        dns:
+        - matchPattern: '*' # allow all dns queries for now to have better visibility in hubble about blocked traffic
+  - toFQDNs:
+    - matchPattern: '*.*.svc.cluster.local.'
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  - toCIDR:
+    - 192.168.0.253/32 # Ruben's Mikrotik Router, make it variable in future
+    toPorts:
+    - ports:
+      - port: "53"
+        protocol: UDP
+      - port: "53"
+        protocol: TCP

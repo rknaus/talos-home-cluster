@@ -134,3 +134,5 @@ No modules.
 | <a name="output_path_to_kubeconfig_file"></a> [path\_to\_kubeconfig\_file](#output\_path\_to\_kubeconfig\_file) | Path to the kubeconfig of the Talos Linux cluster |
 | <a name="output_path_to_talosconfig_file"></a> [path\_to\_talosconfig\_file](#output\_path\_to\_talosconfig\_file) | Path to the talosconfig of the Talos Linux cluster |
 <!-- END_TF_DOCS -->
+
+[back to main README.md](../README.md)

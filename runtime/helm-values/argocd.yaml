@@ -1,0 +1,9 @@
+---
+crds:
+  install: false
+server:
+  ingress:
+    enabled: true
+    annotations:
+      ingress.cilium.io/tls-passthrough: enabled
+    tls: true

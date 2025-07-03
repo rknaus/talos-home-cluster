@@ -20,182 +20,39 @@ The following diagram gives a brief overview about the set up home lab cluster.
 
 <img src="./cluster-diagram/kubernetes-environment.svg"/>
 
-## Talos base installation with Terraforn
+## Infrastructure installation
+
+Talos base installation with Terraforn
 
 ```bash
-cd terraform-talos
+cd infrastructure
 ```
-and follow the instructions in the README of the subfolder
 
-## Cilium installation
+and follow the instructions in the [README.md](infrastructure/README.md) of the infrastructure subfolder
 
-Before the cilium installation the cluster is not ready to be used. So let's go through the setup.
+## Auxiliary installation
 
-Get the latest stable cilium CLI version and download/install it:
+CRD installation required for runtime components
 
 ```bash
-CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
-CLI_ARCH=amd64
-if [ "$(uname -m)" = "arm64" ]; then CLI_ARCH=arm64; fi
-curl -L --fail --remote-name-all https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-darwin-${CLI_ARCH}.tar.gz{,.sha256sum}
-shasum -a 256 -c cilium-darwin-${CLI_ARCH}.tar.gz.sha256sum
-sudo tar xzvfC cilium-darwin-${CLI_ARCH}.tar.gz /usr/local/bin
-rm cilium-darwin-${CLI_ARCH}.tar.gz{,.sha256sum}
+cd auxiliary
 ```
 
-Install cilium Helm chart on the cluster:
+and follow the instructions in the [README.md](auxiliary/README.md) of the auxiliary subfolder
+
+## Runtime installation
+
+Cilium installation and GitOps bootstrapping
 
 ```bash
-helm repo add cilium https://helm.cilium.io/
-
-CILIUM_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium/main/stable.txt)
-helm upgrade -i cilium cilium/cilium --version ${CILIUM_VERSION} \
-  --namespace kube-system \
-  --set ipam.mode=kubernetes \
-  --set=kubeProxyReplacement=true \
-  --set=securityContext.capabilities.ciliumAgent="{CHOWN,KILL,NET_ADMIN,NET_RAW,IPC_LOCK,SYS_ADMIN,SYS_RESOURCE,DAC_OVERRIDE,FOWNER,SETGID,SETUID}" \
-  --set=securityContext.capabilities.cleanCiliumState="{NET_ADMIN,SYS_ADMIN,SYS_RESOURCE}" \
-  --set=cgroup.autoMount.enabled=false \
-  --set=cgroup.hostRoot=/sys/fs/cgroup \
-  --set=k8sServiceHost=localhost \
-  --set=k8sServicePort=7445 \
-  --set ingressController.enabled=true \
-  --set ingressController.default=true \
-  --set l2announcements.enabled=true \
-  --set externalIPs.enabled=true \
-  --set devices=eno1 \
-  --set k8sClientRateLimit.qps=32 \
-  --set k8sClientRateLimit.burst=48 \
-  --set hubble.relay.enabled=true \
-  --set hubble.ui.enabled=true
+cd runtime
 ```
 
-Validate the installation:
+and follow the instructions in the [README.md](runtime/README.md) of the runtime subfolder
 
-```bash
-kubectl get pods --all-namespaces -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,HOSTNETWORK:.spec.hostNetwork --no-headers=true | grep '<none>' | awk '{print "-n "$1" "$2}' | xargs -L 1 -r kubectl delete pod
+# Day two ops tasks
 
-cilium status --wait
-```
-
-### Cilium LoadBalancer IP Pool
-
-```bash
-cat <<EOF | kubectl apply -f -
----
-apiVersion: "cilium.io/v2alpha1"
-kind: CiliumLoadBalancerIPPool
-metadata:
-  name: lb-pool-01
-spec:
-  blocks:
-  - cidr: 192.168.0.208/28
-EOF
-
-# Validation
-
-kubectl get ciliumloadbalancerippool.cilium.io
-
-cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: Service
-metadata:
-  name: service-red
-  namespace: default
-spec:
-  type: LoadBalancer
-  ports:
-  - port: 1234
-EOF
-
-kubectl delete svc service-red
-
-```
-
-### Cilium L2 Announcement Policy
-
-```bash
-cat <<EOF | kubectl apply -f -
-apiVersion: "cilium.io/v2alpha1"
-kind: CiliumL2AnnouncementPolicy
-metadata:
-  name: basic-policy
-spec:
-  interfaces:
-  - eno1
-  externalIPs: true
-  loadBalancerIPs: true
-EOF
-
-# Validation
-
-kubectl get ciliuml2announcementPolicy.cilium.io
-
-```
-
-### Cilium Doc how to set a single IP for the default-ingress
-
-https://mkz.me/weblog/posts/cilium-enable-ingress-controller/
-
-
-## OLM Installation
-
-```bash
-brew install operator-sdk
-operator-sdk olm install
-
-# Validation
-kubectl get ns
-kubectl get pods -n olm
-```
-
-## ArgoCD installation
-
-```bash
-kubectl create namespace argocd
-
-git clone https://github.com/argoproj-labs/argocd-operator.git
-cd argocd-operator
-
-# Install Operator Catalog
-kubectl create -n olm -f deploy/catalog_source.yaml
-
-# Validation
-kubectl get catalogsources -n olm
-kubectl get pods -n olm -l olm.catalogSource=argocd-catalog
-
-# Install Operator Group
-kubectl create -n argocd -f deploy/operator_group.yaml
-
-# Validation
-kubectl get operatorgroups -n argocd
-
-# Install Subscription
-kubectl create -n argocd -f deploy/subscription.yaml
-
-# Validation
-kubectl get subscriptions -n argocd
-kubectl get installplans -n argocd
-kubectl get pods -n argocd
-
-cat <<EOF | kubectl apply -f -
-apiVersion: argoproj.io/v1beta1
-kind: ArgoCD
-metadata:
-  name: argocd
-  namespace: argocd
-spec:
-  server:
-    host: argocd.k8s.local
-    service:
-      type: LoadBalancer
-EOF
-
-kubectl -n argocd get secret argocd-cluster -o jsonpath="{.data.admin\.password}" | base64 -d
-
-```
-
-# Talos Linux Upgrade
+## Talos Linux Upgrade
 
 ```bash
 export CLUSTER_NAME=k8s.local
@@ -231,42 +88,15 @@ kubectl uncordon worker3
 brew upgrade talosctl
 ```
 
-# Kubernetes Upgrade
+## Kubernetes Upgrade
 
 ```bash
 talosctl upgrade-k8s --nodes master0.${CLUSTER_NAME} --endpoints master0.${CLUSTER_NAME}
 ```
 
-# Cilium Upgrade
+# Get the kubeconfig
 
-```bash
-helm repo update cilium
-
-CILIUM_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium/main/stable.txt)
-helm upgrade cilium cilium/cilium --version ${CILIUM_VERSION} \
-  --namespace kube-system \
-  --set ipam.mode=kubernetes \
-  --set=kubeProxyReplacement=true \
-  --set=securityContext.capabilities.ciliumAgent="{CHOWN,KILL,NET_ADMIN,NET_RAW,IPC_LOCK,SYS_ADMIN,SYS_RESOURCE,DAC_OVERRIDE,FOWNER,SETGID,SETUID}" \
-  --set=securityContext.capabilities.cleanCiliumState="{NET_ADMIN,SYS_ADMIN,SYS_RESOURCE}" \
-  --set=cgroup.autoMount.enabled=false \
-  --set=cgroup.hostRoot=/sys/fs/cgroup \
-  --set=k8sServiceHost=localhost \
-  --set=k8sServicePort=7445 \
-  --set ingressController.enabled=true \
-  --set ingressController.default=true \
-  --set l2announcements.enabled=true \
-  --set externalIPs.enabled=true \
-  --set devices=eno1 \
-  --set k8sClientRateLimit.qps=32 \
-  --set k8sClientRateLimit.burst=48 \
-  --set hubble.relay.enabled=true \
-  --set hubble.ui.enabled=true
-
-cilium status --wait
-```
-
-# Get the kubeconfig via talosctl
+## via talosctl
 
 Define general variables:
 
@@ -284,7 +114,9 @@ talosctl kubeconfig \
   --talosconfig=./talosconfig
 ```
 
-[back to main README.md](../README.md)
+## via Terraform generated files
+
+Terraform in the infrastructure folder generates a talosconfig and kubeconfig file in the `configs/${CLUSTER_NAME}/` folder.
 
 # Talos Command Examples
 

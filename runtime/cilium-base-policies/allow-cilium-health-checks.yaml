@@ -1,0 +1,16 @@
+---
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: allow-cilium-health-checks
+spec:
+  description: "This policy is needed when we are running with policy enforcement mode = always"
+  endpointSelector:
+    matchLabels:
+      'reserved:health': ''
+  ingress:
+    - fromEntities:
+      - remote-node
+  egress:
+    - toEntities:
+      - remote-node
