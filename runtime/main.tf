@@ -57,8 +57,18 @@ resource "kubernetes_manifest" "cilium_l2_annoncement_policy" {
   }
 }
 
-# TODO:
-# kubectl get pods --all-namespaces -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,HOSTNETWORK:.spec.hostNetwork --no-headers=true | grep '<none>' | awk '{print "-n "$1" "$2}' | xargs -L 1 -r kubectl delete pod
+resource "null_resource" "delete_unmanaged_pods" {
+  provisioner "local-exec" {
+    command = <<EOT
+    kubectl get pods --all-namespaces -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,HOSTNETWORK:.spec.hostNetwork --no-headers=true \
+      | grep '<none>' \
+      | awk '{print "-n "$1" "$2}' \
+      | xargs -L 1 -r kubectl delete pod
+    EOT
+  }
+
+  depends_on = [helm_release.cilium]
+}
 
 resource "helm_release" "argocd" {
   name             = "argocd"

@@ -7,6 +7,15 @@ operational base cluster.
 
 ## Requirements
 
+The local kubeconfig needs to have the desired kubernetes cluster as the active context for the
+following command to be executed by terraform:
+
+```bash
+kubectl get pods --all-namespaces -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,HOSTNETWORK:.spec.hostNetwork --no-headers=true \
+  | grep '<none>' \
+  | awk '{print "-n "$1" "$2}' \
+  | xargs -L 1 -r kubectl delete pod
+```
 
 ## Applying the Runtime configuration
 
@@ -41,6 +50,7 @@ terraform-docs markdown table --output-file README.md --output-mode inject .
 |------|---------|
 | <a name="provider_helm"></a> [helm](#provider\_helm) | 3.0.2 |
 | <a name="provider_kubernetes"></a> [kubernetes](#provider\_kubernetes) | 2.37.1 |
+| <a name="provider_null"></a> [null](#provider\_null) | 3.2.4 |
 | <a name="provider_terraform"></a> [terraform](#provider\_terraform) | n/a |
 
 ## Modules
@@ -56,6 +66,7 @@ No modules.
 | [kubernetes_manifest.cilium_base_network_policy](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/manifest) | resource |
 | [kubernetes_manifest.cilium_l2_annoncement_policy](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/manifest) | resource |
 | [kubernetes_manifest.cilium_lb_pool](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/manifest) | resource |
+| [null_resource.delete_unmanaged_pods](https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource) | resource |
 | [terraform_remote_state.infrastructure](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/data-sources/remote_state) | data source |
 
 ## Inputs
