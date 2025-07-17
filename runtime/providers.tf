@@ -13,7 +13,7 @@ terraform {
 }
 
 provider "kubernetes" {
-  config_path    = "${path.module}/../infrastructure/configs/${data.terraform_remote_state.infrastructure.outputs.cluster_name}/kubeconfig"
+  config_path = "${path.module}/../infrastructure/configs/${data.terraform_remote_state.infrastructure.outputs.cluster_name}/kubeconfig"
 }
 
 provider "helm" {

@@ -11,20 +11,10 @@ resource "helm_release" "cilium" {
 
   set = [
     {
-      name  = "policyEnforcementMode"
-      value = var.cilium_policy_enforcement_mode
-    },
-    {
       name  = "devices"
       value = "eno1"
     }
   ]
-}
-
-resource "kubernetes_manifest" "cilium_base_network_policy" {
-  for_each = lower(var.cilium_policy_enforcement_mode) == "always" ? fileset("${path.module}/cilium-base-policies", "*.yaml") : []
-
-  manifest = yamldecode(file("${path.module}/cilium-base-policies/${each.value}"))
 }
 
 resource "kubernetes_manifest" "cilium_lb_pool" {
@@ -88,4 +78,66 @@ resource "helm_release" "argocd" {
       value = "argocd.${data.terraform_remote_state.infrastructure.outputs.cluster_name}"
     }
   ]
+}
+
+resource "kubernetes_manifest" "argocd_app_of_apps_project" {
+  manifest = {
+    "apiVersion" : "argoproj.io/v1alpha1",
+    "kind" : "AppProject",
+    "metadata" : {
+      "name" : "app-of-apps",
+      "namespace" : "argocd",
+    },
+    "spec" : {
+      "clusterResourceWhitelist" : [
+        {
+          "group" : "*",
+          "kind" : "*"
+        }
+      ],
+      "destinations" : [
+        {
+          "name" : "in-cluster",
+          "namespace" : "*",
+          "server" : "https://kubernetes.default.svc"
+        }
+      ],
+      "sourceRepos" : [
+        "https://github.com/rknaus/argocd-gitops"
+      ]
+    }
+  }
+
+  depends_on = [helm_release.argocd]
+}
+
+resource "kubernetes_manifest" "argocd_app_of_apps" {
+  manifest = {
+    "apiVersion" : "argoproj.io/v1alpha1",
+    "kind" : "Application",
+    "metadata" : {
+      "name" : "app-of-apps",
+      "namespace" : "argocd",
+    },
+    "spec" : {
+      "destination" : {
+        "name" : "in-cluster",
+        "namespace" : "argocd"
+      },
+      "project" : "app-of-apps",
+      "source" : {
+        "path" : "argocd-apps",
+        "repoURL" : "https://github.com/rknaus/argocd-gitops",
+        "targetRevision" : "HEAD"
+      },
+      "syncPolicy" : {
+        "automated" : {
+          "prune" : true,
+          "selfHeal" : true
+        }
+      }
+    }
+  }
+
+  depends_on = [kubernetes_manifest.argocd_app_of_apps_project]
 }

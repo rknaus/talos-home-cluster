@@ -63,7 +63,8 @@ No modules.
 |------|------|
 | [helm_release.argocd](https://registry.terraform.io/providers/hashicorp/helm/latest/docs/resources/release) | resource |
 | [helm_release.cilium](https://registry.terraform.io/providers/hashicorp/helm/latest/docs/resources/release) | resource |
-| [kubernetes_manifest.cilium_base_network_policy](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/manifest) | resource |
+| [kubernetes_manifest.argocd_app_of_apps](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/manifest) | resource |
+| [kubernetes_manifest.argocd_app_of_apps_project](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/manifest) | resource |
 | [kubernetes_manifest.cilium_l2_annoncement_policy](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/manifest) | resource |
 | [kubernetes_manifest.cilium_lb_pool](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/manifest) | resource |
 | [null_resource.delete_unmanaged_pods](https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource) | resource |
@@ -76,7 +77,6 @@ No modules.
 | <a name="input_argocd_chart_version"></a> [argocd\_chart\_version](#input\_argocd\_chart\_version) | Version of the ArgoCD Helm Chart | `string` | `"8.1.2"` | no |
 | <a name="input_cilium_chart_version"></a> [cilium\_chart\_version](#input\_cilium\_chart\_version) | Version of the Cilium Helm Chart | `string` | `"1.17.5"` | no |
 | <a name="input_cilium_lb_pool"></a> [cilium\_lb\_pool](#input\_cilium\_lb\_pool) | n/a | <pre>list(object({<br/>    cidr = string<br/>  }))</pre> | n/a | yes |
-| <a name="input_cilium_policy_enforcement_mode"></a> [cilium\_policy\_enforcement\_mode](#input\_cilium\_policy\_enforcement\_mode) | The Cilium Policy enforcement mode | `string` | `"always"` | no |
 | <a name="input_infrastructure_remote_state"></a> [infrastructure\_remote\_state](#input\_infrastructure\_remote\_state) | Path to the remote state file of the infrastructure module. | `string` | n/a | yes |
 
 ## Outputs
